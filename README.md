@@ -1,4 +1,4 @@
-# RoboCup 2D Smart Game Tree
+# RoboCup 2D Smart Game Tree Bot
 
 **Agent1**: a 5-a-side RoboCup 2D team that attacks with tiki-taka passing chains,
 chosen by a game-tree search.
@@ -130,8 +130,8 @@ Every tuning constant is explained in [`agent/config.py`](agent/config.py).
 The starter needs Python 3.11 and x86_64 Linux or Apple-silicon macOS.
 
 ```bash
-git clone --recursive https://github.com/sir12321/robocup-2d-smart-game-tree.git
-cd robocup-2d-smart-game-tree/py2d
+git clone --recursive https://github.com/sir12321/robocup-2d-smart-game-tree-bot.git
+cd robocup-2d-smart-game-tree-bot/py2d
 ```
 
 Then do the one-time setup from [`py2d/README.md`](py2d/README.md): install
