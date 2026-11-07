@@ -1,4 +1,7 @@
-# Agent1: a search-based RoboCup 2D 5-a-side team
+# RoboCup 2D Smart Game Tree
+
+**Agent1**: a 5-a-side RoboCup 2D team that attacks with tiki-taka passing chains,
+chosen by a game-tree search.
 
 [![Python 3.11](https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![NumPy](https://img.shields.io/badge/numpy-vectorised-013243?logo=numpy&logoColor=white)](https://numpy.org/)
@@ -127,8 +130,8 @@ Every tuning constant is explained in [`agent/config.py`](agent/config.py).
 The starter needs Python 3.11 and x86_64 Linux or Apple-silicon macOS.
 
 ```bash
-git clone --recursive https://github.com/sir12321/robocup-2d-search-agent.git
-cd robocup-2d-search-agent/py2d
+git clone --recursive https://github.com/sir12321/robocup-2d-smart-game-tree.git
+cd robocup-2d-smart-game-tree/py2d
 ```
 
 Then do the one-time setup from [`py2d/README.md`](py2d/README.md): install
