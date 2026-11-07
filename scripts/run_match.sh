@@ -20,12 +20,6 @@ if [ ! -f "$PY2D/a3.py" ]; then
     exit 1
 fi
 
-# agent.py is generated from agent/: rebuild it if the source changed.
-if ! python3 "$ROOT/tools/bundle.py" --check >/dev/null; then
-    echo "agent/ changed since agent.py was built: rebuilding"
-    python3 "$ROOT/tools/bundle.py"
-fi
-
 opp="${1:-full}"
 if [ $# -gt 0 ]; then shift; fi
 

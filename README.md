@@ -7,8 +7,8 @@ chosen by a game-tree search.
 [![NumPy](https://img.shields.io/badge/numpy-vectorised-013243?logo=numpy&logoColor=white)](https://numpy.org/)
 [![RoboCup 2D](https://img.shields.io/badge/RoboCup-2D%20soccer%20simulation-0A7BBB)](https://rcsoccersim.github.io/)
 [![5-a-side](https://img.shields.io/badge/format-5--a--side-2E8B57)](#how-it-works)
-[![Expectimax beam search](https://img.shields.io/badge/AI-expectimax%20beam%20search-8A2BE2)](docs/design.md#5-on-the-ball)
-[![Minimax defence](https://img.shields.io/badge/AI-minimax%20defence-8A2BE2)](docs/design.md#7-defensive-assignment)
+[![Game-tree beam search](https://img.shields.io/badge/AI-game--tree%20beam%20search-8A2BE2)](docs/design.md#5-on-the-ball-the-game-tree-search)
+[![Min-max marking](https://img.shields.io/badge/AI-min--max%20marking-8A2BE2)](docs/design.md#7-defensive-marking)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-lightgrey)](#running-it)
 [![COL333 IIT Delhi](https://img.shields.io/badge/course-COL333%20%C2%B7%20IIT%20Delhi-B22222)](#note-for-students)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
@@ -39,7 +39,7 @@ decision-making of the players.
 | Assignment harness ([fork of PY2D](https://github.com/TheAbry/COL333-Assignment-3-py2d-fork), included as the `py2d/` submodule): `a3.py`, the student interface, perception, formations, set pieces, **the goalkeeper**, penalties | COL333 course staff |
 | HELIOS reference opponent (`full`) | HELIOS team, ships with PY2D |
 | GIBBS replay viewer | Edward Moore, Oliver Obst (GPL-3) |
-| **Agent1: everything in [`agent/`](agent/)** (the bundled [`agent.py`](agent.py)), [`tools/`](tools/), [`scripts/`](scripts/), [`docs/`](docs/) | **us** |
+| **Agent1: [`agent.py`](agent.py)**, plus [`scripts/`](scripts/), [`docs/`](docs/), [`results/`](results/) | **us** |
 
 The framework calls two methods per player per cycle: `on_ball` when he can kick the
 ball and `off_ball` otherwise. Those two methods, and everything behind them, are ours.
@@ -56,11 +56,11 @@ flowchart TD
     CTX -- "can kick" --> ON["on_ball"]
     CTX -- "otherwise" --> OFF["off_ball"]
     ON --> EVAL["Evaluate passes, shots, dribbles"]
-    EVAL --> EXP["Expectimax beam search over pass/dribble chains"]
-    OFF --> RULES["Tackle, chase, block, give-and-go, or position"]
-    RULES --> DEF["Defensive assignment: minimax over spots vs. the opponents' options"]
+    EVAL --> TREE["Game-tree beam search over pass/dribble chains"]
+    OFF --> RULES["Tackle, chase, block, or position"]
+    RULES --> DEF["Marking: min-max assignment of defenders to opponents"]
     RACE --> EVAL
-    RACE --> DEF
+    RACE --> RULES
 ```
 
 - **Race model.** For any ball trajectory, predict the first cycle at which each player
@@ -69,61 +69,52 @@ flowchart TD
   raced against all players at once. Opponents get the benefit of the doubt (bigger
   reach, no turning needed); our tired teammates don't.
 - **Passes, shots and dribbles** get a success probability from the race margin (their
-  arrival minus ours), calibrated against our match logs. Each option's value is
-  `p · 0.985^t · V(we keep it there) + (1 − p) · V(they win it there)`, on a scale of
-  roughly "chance this possession ends in a goal".
-- **On the ball:** shoot if the goal probability clears a situation-dependent
-  threshold. Otherwise run an anytime **expectimax beam search** (width 24, depth 4).
-  Every pass or dribble is a chance node, and each child state imagines the opponents
-  pressing the receiver and our players making runs, including a give-and-go by the
-  passer.
-- **Off the ball:** the first applicable rule of: block a shot, tackle, tactical foul,
-  chase, block the carrier's predicted dribble, continue a give-and-go, or take up a
-  position.
-- **Defence:** enumerate what the opponent carrier could do next (passes, dribbles,
-  shots, plus one follow-up step), then try every assignment of defenders to candidate
-  spots and keep the one that minimises the opponents' best remaining option.
+  arrival minus ours). Dribbles and self-passes are simulated with the server's own
+  player physics, kick by kick and dash by dash.
+- **On the ball: tiki-taka as a game-tree search.** Shoot if the goal probability clears
+  a threshold. Otherwise build a tree: our moves are safe passes and dribbles, and the
+  opponents' reply is pessimistic (everyone runs at the new ball position). A beam
+  search (width 10, depth 3) scores each chain by progress and scoring threat minus its
+  risk, and plays the first pass of the best chain.
+- **Off the ball:** the first applicable rule of: tackle (or a tactical foul), chase,
+  block the carrier's predicted dribble, or take up a position. In attack, players
+  make runs and look for open passing spots; in defence, every opponent is marked
+  goal-side, with the assignment that minimises the longest run.
 - **Stamina:** every player estimates every other player's stamina by inverting the
-  server's physics from observed movement. Stoppages are bridged with recovery tables
-  fitted to our logs. Passes avoid teammates who can't make the sprint, and runs are
-  paced to arrive just in time.
+  server's physics from observed movement, with stoppages bridged by recovery tables
+  fitted to our logs. Passes avoid teammates who can't make the sprint. Tired players
+  switch to a recovery mode, and teammates read that from how they move.
 - **No communication:** players coordinate because each runs the same deterministic
   computation on the same world model.
 
 The full write-up, with all the numbers, is in **[docs/design.md](docs/design.md)**.
-Every tuning constant is explained in [`agent/config.py`](agent/config.py).
 
 ## Results
 
-<!-- TODO: fill in. Run e.g. 20 matches per opponent (use -p to run in parallel). -->
+**400 full matches against HELIOS**, the reference team that ships with PY2D
+(5-a-side, two halves of 750 cycles, alternating sides). **Agent1 plays HELIOS level:**
+it goes unbeaten in 62% of matches, and its average goal difference is exactly zero.
 
-| Opponent | Matches | W | D | L | Goals for | Goals against |
-|---|---|---|---|---|---|---|
-| HELIOS reference (`full`) | | | | | | |
-| Course starter agent | | | | | | |
-<!-- | Course leaderboard / tournament | | | | | | | -->
+| Opponent | Matches | Won | Drawn | Lost | Goals for | Goals against | Goal diff. per match | Points per match |
+|---|---|---|---|---|---|---|---|---|
+| HELIOS (`full`) | 400 | 149 (37.2%) | 99 (24.8%) | 152 (38.0%) | 572 (1.43 per match) | 573 (1.43 per match) | 0.00 ± 0.15 | 1.36 |
 
-**Ablations** (what each component is worth):
-<!-- TODO: turn one feature off at a time in agent/config.py, rebuild, replay the same
-     number of matches against `full`, and record goal difference. -->
+± is the 95% confidence interval; points are 3 for a win and 1 for a draw.
 
-| Variant | Goal difference vs. `full` |
-|---|---|
-| Final Agent1 | |
-| without give-and-go (`GIVE_GO = False`) | |
-| without stamina-aware races (`STAM_RACE = False`) | |
-| man-marking instead of the minimax assignment (`MAN_MARK = True`) | |
-| without fitted pass calibration (`PASS_FIT = None`) | |
+- **Most common scores:** 2–1 win (57 matches), 1–1 (52), 1–2 loss (50).
+- **Biggest win** 5–1, **biggest loss** 0–4. Agent1 kept 58 clean sheets and failed to
+  score in 78 matches.
+- **No side bias:** goal difference per match is −0.03 in the 197 matches on the left
+  and +0.02 in the 203 on the right.
+- **Stable over the run:** in chronological blocks of 100 matches, goal difference per
+  match was −0.17, +0.07, −0.15 and +0.24, all within the noise of a 100-match sample
+  (about ±0.3).
 
-## What didn't work
-
-<!-- TODO: your story. Things that are still in the code but switched off, which you
-     could explain here:
-     - the hysteresis recovery mode (STAMINA_MODE) and stamina signalling (STAM_SIGNAL)
-     - alternative defences: MAN_MARK, STOPPER, LOW_BLOCK, MIDBLOCK
-     - the chain search over field-evaluation scores (EXP_BEAM < 2)
-     - the removed DRAIN_* (breakaways) and RUN_* (support runs) features
-     For each: what you expected, what happened, and how you measured it. -->
+Every match passed the harness's log checks (full length, five players a side), and the
+scores agree with the server's own result logs. The per-match results are in
+[`results/helios_400.csv`](results/helios_400.csv). In the match logs our team is named
+`STARTER`. [`agent.py`](agent.py) is byte for byte the file that played these matches
+(SHA-256 `828b466b…`).
 
 ## Running it
 
@@ -151,26 +142,12 @@ cycle by cycle with `python3 a3.py why`, both from inside `py2d/`.
 ## Repository layout
 
 ```
-agent/            Agent1's source, one module per concern (see agent/__init__.py)
-agent.py          the single file the harness loads, generated from agent/
-tools/bundle.py   builds agent.py from agent/ (and checks it is up to date)
+agent.py          Agent1: the whole bot, in the one file the harness loads
 scripts/          run_match.sh
 docs/design.md    how it works, in detail
+results/          per-match results against HELIOS
 py2d/             the course's starter environment (git submodule, not our code)
 ```
-
-### Changing the agent
-
-Edit the modules in `agent/`, then rebuild the single file:
-
-```bash
-python3 tools/bundle.py            # agent/ -> agent.py
-python3 tools/bundle.py --check    # is agent.py up to date?
-```
-
-`scripts/run_match.sh` rebuilds automatically if needed. After documentation-only
-changes, `python3 tools/bundle.py --verify old_agent.py` confirms that the code itself
-did not change (it compares the parsed program, ignoring comments and docstrings).
 
 ## License
 
