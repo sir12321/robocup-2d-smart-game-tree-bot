@@ -143,6 +143,7 @@ cycle by cycle with `python3 a3.py why`, both from inside `py2d/`.
 
 ```
 agent.py          Agent1: the whole bot, in the one file the harness loads
+agent_breakdown/  agent.py split by topic for reading (parts.py check: in sync)
 scripts/          run_match.sh
 docs/design.md    how it works, in detail
 results/          per-match results against HELIOS
