@@ -89,6 +89,39 @@ flowchart TD
 
 The full write-up, with all the numbers, is in **[docs/design.md](docs/design.md)**.
 
+## Play style
+
+**Agent1 leans towards attack; HELIOS is the more balanced, positional team.** Most of
+Agent1's intelligence goes into having the ball: a game-tree search over passing chains,
+two forwards making runs on the last defender, and support players looking for open
+passing lanes. Its defence is deliberately simple: man-marking plus aggressive tackling,
+with no deep block and no counter-attack mode.
+
+The 400 matches against HELIOS show the same thing:
+
+| Open play | Agent1 | HELIOS |
+|---|---|---|
+| Caught offside (forwards playing on the last line) | 152 | 61 |
+| Fouls committed (tackling high, deliberate fouls) | 1,087 | 396 |
+| Share of open play spent in the other team's half | 45.6% | 54.4% |
+
+HELIOS holds more territory, but Agent1 scores just as often (572 goals to HELIOS's 573
+over the 400 matches).
+
+**Style profile.** This is our own rating from the code, not a measured score:
+
+| Style | Rating | Why |
+|---|---|---|
+| Slow passes + search (possession, tiki-taka) | ★★★★★ | The core of the bot: safe passing chains chosen by search, kept only if success ≥ 0.80 (0.65 in attack) |
+| Physics-based prediction | ★★★★★ | Every decision rests on the race model of who reaches the ball first |
+| Stamina management | ★★★★★ | Estimates everyone's stamina, paces runs, recovery mode that teammates can read |
+| High press / aggressive tackling | ★★★★☆ | Zone tackles at 80% success, deliberate fouls, a blocker who engages the carrier |
+| Deep search | ★★★☆☆ | A beam search of width 10 and depth 3 within 300 ms: whole chains, but shallow, and only on the ball |
+| Dribbling and solo play | ★★★☆☆ | Dribbles and self-passes simulated with real player physics, but only taken when very safe |
+| Search + learned shot selection | ★★☆☆☆ | Shots come from a physics model (field-player and keeper races) with hand-tuned thresholds; nothing is learned |
+| Defend + counter | ★☆☆☆☆ | Counter-attack mode is switched off; it marks man to man instead of sitting deep and breaking |
+| Set pieces | ★☆☆☆☆ | Run by the course framework; Agent1 only adds defensive covers after them |
+
 ## Results
 
 **400 full matches against HELIOS**, the reference team that ships with PY2D
